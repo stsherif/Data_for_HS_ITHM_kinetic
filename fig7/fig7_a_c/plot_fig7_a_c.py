@@ -13,16 +13,38 @@ import matplotlib.gridspec as gridspec
 
 folder=Path('.')
 
+
+
+from matplotlib import font_manager
+
+font_manager.fontManager.addfont("/mnt/c/Windows/Fonts/times.ttf")
+font_manager.fontManager.addfont("/mnt/c/Windows/Fonts/timesbd.ttf")
+font_manager.fontManager.addfont("/mnt/c/Windows/Fonts/timesi.ttf")
+font_manager.fontManager.addfont("/mnt/c/Windows/Fonts/timesbi.ttf")
+plt.rcParams.update({
+     "text.usetex": True,
+    "font.family": "serif",
+    "font.serif": ["Times New Roman"],
+    "font.size": 24,
+    #'axes.titlesize': 16,     # title size
+    'axes.labelsize': 14,     # x/y label size
+    'xtick.labelsize': 14,    # x tick size
+    'ytick.labelsize': 14,    # y tick size
+    'legend.fontsize': 13,    # legend font
+    })
+
+matplotlib.rcParams["pdf.fonttype"] = 42
+matplotlib.rcParams["ps.fonttype"]  = 42
 print('no inputs')
 
-Nx = 12# int(sys.argv[1])
+Nx = 6# int(sys.argv[1])
 Ny = 6#int(sys.argv[2])
 num = 4#int(sys.argv[3])
 fnames=[]
 fnames_temp=[]
 nh=[]
 for f in folder.rglob('*.txt'):
-    if f.is_file() and str(Nx)+'x'+str(Ny) in f.name and 'S_of_q' in f.name:
+    if f.is_file() and str(Nx)+'x'+str(Ny) in f.name and 'Sq' in f.name:
         fnames_temp.append(str(f))
 
 for f in folder.rglob('*.txt'):
@@ -44,10 +66,25 @@ for i in range(3):
     for l in ind:
         fnames.append(fnames_temp[l+i*num])
 
+#print(fnames)
+#num = int(len(fnames)/3)
 N = Nx*Ny
 
 nh = []
+'''
+if sys.argv[3]=='bulk':
+    if Nx <= 6 :
+        N = N - 2*Ny
+        Nx = Nx-2*Ny
+    else:
+        N = N - 4*Ny
+        Nx = Nx-4*Ny
+'''
 
+
+nn=4
+#N = Nx*Ny
+#print("N",N)
 KX=[]
 KY=[]
 SS=[]
@@ -65,9 +102,9 @@ for i in range(num):
              nh.append(round(Nh/N,3))
              #max_sq = float(line[2])
          else:
-             KX[i].append(float(line[0]))
-             KY[i].append(float(line[1]))
-             SS[i].append(float(line[4])) #3 for SZ or 4 for Stot
+             KX[i].append(round(float(line[0]),5))
+             KY[i].append(round(float(line[1]),5))
+             SS[i].append(round(float(line[4]),5)) #3 for SZ or 4 for Stot
     f.close()
 kx=[]
 ky=[]
@@ -92,10 +129,20 @@ for i in range(num):
     for l,line in enumerate(f):
          line=line.strip()
          line=line.split(" ")
-         KXo[i].append(float(line[0]))
-         KYo[i].append(float(line[1]))
-         OCC[i].append(float(line[2]))
+         #if l == 0:
+             #Nh = int(line[1])
+             #nh.append(round(Nh/N),3)
+             #max_sq = float(line[2])
+         #else:
+         KXo[i].append(round(float(line[0]),5))
+         KYo[i].append(round(float(line[1]),5))
+         OCC[i].append(round(float(line[2]),5))
+         #if i==2:
+             #print(line[0],line[1],line[2])
     f.close()
+#print(len(OCC[0]))
+#print(len(OCC[1]))
+#print(len(OCC[2]))
 kxo=[]
 kyo=[]
 occ=[]
@@ -132,9 +179,9 @@ for i in range(num):
     kxo0.append([])
     kyo0.append([])
     occ0.append([])
-    kxo0[i] = np.reshape(KXo0[i],(2*2*Nx+1,2*2*Ny+1))
-    kyo0[i] = np.reshape(KYo0[i],(2*2*Nx+1,2*2*Ny+1))
-    occ0[i] = np.reshape(OCC0[i],(2*2*Nx+1,2*2*Ny+1))
+    kxo0[i] = np.reshape(KXo0[i],(2*nn*Nx+1,2*nn*Ny+1))
+    kyo0[i] = np.reshape(KYo0[i],(2*nn*Nx+1,2*nn*Ny+1))
+    occ0[i] = np.reshape(OCC0[i],(2*nn*Nx+1,2*nn*Ny+1))
 
 #vx=1.85 #for all
 vx=1.53 #for bulk
@@ -157,26 +204,6 @@ sK=[]
 sM=[]
 sM2=[]
 
-fnames=['bulk_max_sq_sq_at_kpoints_sq_at_mpoints_6x6_infU.txt','bulk_max_sq_sq_at_kpoints_sq_at_mpoints_12x6_infU.txt']
-for i in range(2):
-    nh2.append([])
-    sq_max.append([])
-    sK.append([])
-    sM.append([])
-    sM2.append([])
-    f=open(fnames[i],'r')
-    for l,line in enumerate(f):
-        if l>0:
-            if i==3 and l<2: #i==1
-                continue
-            line=line.strip()
-            line=line.split(" ")
-            nh2[i].append(float(line[0]))
-            sq_max[i].append(float(line[1]))
-            sK[i].append(float(line[2]))
-            sM[i].append(float(line[3]))
-            sM2[i].append(float(line[4]))
-    f.close()
 #---------------------------------------------------------------------------------------------------------
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #PLOT STATIC STRUCTURE FACTOR OVER THE K SPACE
@@ -195,22 +222,14 @@ elif num==4:
     offx=0.68
     sx=6.67
     sy=5
-fig= plt.figure(figsize=(19,7)) #17,5.7
-gs = gridspec.GridSpec(3, 6, width_ratios=[1.5,1.5,1.5,1.5,1.5,6.5])
+#fig,ax = plt.subplots(nrows=3, ncols=num,sharey=True,subplot_kw={'xticks': [-1,-0.5,0,0.5,1.0], 'yticks': [-1,-0.5,0,0.5,1.0]},figsize=(sx,sy))
+fig= plt.figure(figsize=(10,7)) #17,5.7
+plt.subplots_adjust(wspace=0.1, hspace=-0.3)
+gs = gridspec.GridSpec(3, 5, width_ratios=[1.5,1.5,1.5,1.5,1.5])
 ax=[]
-
-
-
-from matplotlib import font_manager
-
-font_manager.fontManager.addfont("/mnt/c/Windows/Fonts/times.ttf")
-font_manager.fontManager.addfont("/mnt/c/Windows/Fonts/timesbd.ttf")
-font_manager.fontManager.addfont("/mnt/c/Windows/Fonts/timesi.ttf")
-font_manager.fontManager.addfont("/mnt/c/Windows/Fonts/timesbi.ttf")
 plt.rcParams.update({
-     "text.usetex": True,
-    "font.family": "serif",
-    "font.serif": ["Times New Roman"],
+    #"font.family": "serif",
+    #"font.serif": ["Times New Roman"],
     "font.size": 24,
     #'axes.titlesize': 16,     # title size
     'axes.labelsize': 14,     # x/y label size
@@ -218,20 +237,9 @@ plt.rcParams.update({
     'ytick.labelsize': 14,    # y tick size
     'legend.fontsize': 13,    # legend font
     })
-
-matplotlib.rcParams["pdf.fonttype"] = 42   
-matplotlib.rcParams["ps.fonttype"]  = 42
-
 for n in range(3):
        for m in range(4):
               ax.append(fig.add_subplot(gs[n, m]))
-toshare=fig.add_subplot(gs[0:2, 5])
-ax.append(toshare)
-
-ax.append(fig.add_subplot(gs[2, 5],sharex=toshare))              
-
-plt.subplots_adjust(wspace=0.05, hspace=-0.2)
-#colors=str(sys.argv[1])
 gx=22
 gy=12
 norm = mcolors.Normalize(vmin=0,vmax=vx)
@@ -248,47 +256,50 @@ for i in range(num):
      ax[i].axis('equal')
      ax[i].set_ylim([-1,1])
      ax[i].set_xlim(-1,1)
+     #ax[i].autoscale_view()
      ax[i].set_aspect('equal', adjustable='box')
+     #ax[i].set_aspect('auto')
      #===========================================================================================================
      ax2_divider = make_axes_locatable(ax[i+4])
-     im2 = ax[i+4].hexbin(
-     kxo0[i].ravel(),
-     kyo0[i].ravel(),
-     C=occ[i].ravel(),
-     gridsize=(gx,gy), #int(N/4),           # number of hexagons across
-     cmap=plt.cm.gist_heat,
-     vmax=vx2, vmin=0.0)
+     im2 = ax[i+4].scatter(kxo[i].flatten(),kyo[i].flatten(),c=occ[i].flatten(),marker='h',cmap='Reds',s=((occ[i].flatten())**1)*60)#plt.cm.gist_heat)
      im2.set_edgecolor("face")
      ax[i+4].axis('equal')
      ax[i+4].set_aspect('equal', adjustable='box')
+     #ax[i+8].set_aspect('equal', adjustable='box')
      ax[i+4].set_ylim(-1,1)
      ax[i+4].set_xlim(-1,1)
+     #ax[i+4].autoscale_view()
+     #ax[i+4].set_aspect('auto')
+     #im2 = ax[i+4].contourf(kxo[i],kyo[i],occ[i],300,cmap=plt.cm.gist_heat, vmin=0,vmax=0.98)
      #==========================================================================================================
      ax3_divider = make_axes_locatable(ax[i+8])
-     im3 = ax[i+8].hexbin(
-     kxo0[i].ravel(),
-     kyo0[i].ravel(),
-     C=occ0[i].ravel(),
-     gridsize=(gx,gy), #int(N/4),           # number of hexagons across
-     cmap=plt.cm.gist_heat,
-     vmax=vx2, vmin=0.0)
+     im3 = ax[i+8].scatter(kxo0[i].flatten(),kyo0[i].flatten(),c=occ0[i].flatten(),marker='h',cmap='Reds',s=((occ0[i].flatten())**1)*60)#plt.cm.gist_heat) #s=((occ0[i].flatten())**1)*100
+     #ax[i+8].set_ylim(-1,1)
+     #ax[i+8].set_xlim(-1,1)
+     #ax[i+8].autoscale_view()
      im3.set_edgecolor("face")
      ax[i+8].axis('equal')
      ax[i+8].set_aspect('equal', adjustable='box')
-     ax[i+8].set_xlim(-1, 1)
-     ax[i+8].set_ylim(-1, 1)
+     ax[i+8].set_xlim([-1, 1])
+     ax[i+8].set_ylim([-1, 1])
+     #ax[i+8].set_aspect('equal', adjustable='box')
+     #ax[i+8].set_aspect('auto')
+     #im3 = ax[i+8].contourf(kxo0[i],kyo0[i],occ0[i],300,cmap=plt.cm.gist_heat , vmin=0,vmax=0.98)
 #========================color bar=======================================
 
-cax1 = fig.add_axes([0.468, ax[3].get_position().y0+0.04, 0.006, 0.2155])
+cax1 = fig.add_axes([0.75, ax[3].get_position().y0+0.06, 0.009, 0.20])
 tick1 = [0.00, round((np.min(SSF[0]) + np.max(SSF[0])) / 2, 2), round(np.max(SSF[0]), 2)-0.01]
 cb1 = fig.colorbar(im10, cax=cax1, orientation='vertical', ticks=tick1)
 cb1.ax.tick_params(labelsize=14)
 
-cax3 = fig.add_axes([0.468, ax[11].get_position().y0+0.15, 0.006, 0.2155])
+cax3 = fig.add_axes([0.75, ax[11].get_position().y0+0.19, 0.009, 0.20])
 tick3 = [0, round((np.min(occ0[num-1]) + np.max(occ0[num-1])) / 2, 2), round(np.max(occ0[num-1]), 2)-0.01]
 cb3 = fig.colorbar(im3, cax=cax3, orientation='vertical', ticks=tick3)
 cb3.ax.tick_params(labelsize=14)
 #=======================================================================
+#for i in range(12):
+#ax[i].set_frame_on(False)
+#========================================================================
 #corners of hexagonal BZ
 coord=[[2.0/3,0],[1.0/3,-1.0/np.sqrt(3)],[-1.0/3,-1.0/np.sqrt(3)],[-2.0/3,0],[-1.0/3,1.0/np.sqrt(3)],[1.0/3,1.0/np.sqrt(3)]]
 bonds=[[1,2],[2,3],[3,4],[4,5],[5,6],[6,1]]
@@ -299,15 +310,15 @@ for j,bond in enumerate(bonds):
     for r in range(12):
             ax[r].set_ylim(-1, 1)
             ax[r].tick_params(labelbottom=False, labelleft=False, bottom=False, left=False) 
-            ax[r].plot([coord[site1][0],coord[site2][0]],[coord[site1][1],coord[site2][1]],lw=0.9,c='w',linestyle='--')
+            ax[r].plot([coord[site1][0],coord[site2][0]],[coord[site1][1],coord[site2][1]],lw=0.9,c='y',linestyle='--')
 
 fig.canvas.draw()
-y_line = 0.87
+y_line = 0.845
 fig_width = fig.get_figwidth()
 for i in range(num):
     bbox = ax[i].get_position()
     x_center = (bbox.x0 + bbox.x1) / 2
-    fig.text(x_center,y_line+0.015, f'{nh[i]:.3f}',ha='center',va='bottom',fontsize=18)
+    fig.text(x_center,y_line+0.012, f'{nh[i]:.3f}',ha='center',va='bottom',fontsize=18)
     fig.text(x_center, y_line, '|', ha='center', va='center', fontsize=18,rotation=90)
 fig.lines.append(plt.Line2D([ax[0].get_position().x0+0.02, (ax[3].get_position().x1)-0.005],[y_line, y_line], transform=fig.transFigure, color='black'))
 #=============================================================================================
@@ -327,67 +338,61 @@ ax_annotate.annotate(
     arrowprops=dict(arrowstyle='->', color='black', lw=1.5),
 )
 #=================================================================================================
+#ax[0][0].set_ylabel(r'$q_y/2\pi$',rotation=90, position=(-1,0.5),fontsize = 12)
+#ax[1][0].set_ylabel(r'$q_y/2\pi$',rotation=90, position=(-1,0.5),fontsize = 12)
+#plt.tight_layout()    
 ax[0].set_ylabel(r'$U/t=\infty$',rotation=90, position=(-1,0.5),fontsize = 20.5)
 ax[4].set_ylabel(r'$U/t=\infty$',rotation=90, position=(-1,0.5),fontsize = 20.5)
 ax[8].set_ylabel(r'$U/t=0$',rotation=90, position=(-1,0.5),fontsize = 20.5)
 plt.text(0.12,y_line+0.015,'$n_{h}$',fontsize = 24)
-ax[0].text(-0.12,0.00,r'$\mathbf{\Gamma}$',fontsize = 16,color='w')
-ax[0].text(-0.12,1/np.sqrt(3),'$\mathbf{M_{1}}$',fontsize = 14,color='w')
-ax[0].text(1/3,1/np.sqrt(3),r'$\mathbf{K}$',fontsize = 14,color='w')
-ax[0].text(0.5,1/(2*np.sqrt(3)),r'$\mathbf{M_{2}}$',fontsize = 14,color='w')
+#ax[0].text(-0.12,0.00,r'$\Gamma$',fontsize = 16,color='w')
+#ax[0].text(-0.12,1/np.sqrt(3),'$M_{1}$',fontsize = 14,color='w')
+#ax[0].text(1/3,1/np.sqrt(3),r'$K$',fontsize = 14,color='w')
+#ax[0].text(0.5,1/(2*np.sqrt(3)),r'$M_{2}$',fontsize = 14,color='w')
+#plt.subplots_adjust(wspace=0.0)
 #=========================================================================
+'''
+fig.canvas.draw()
+x_line = 0.95
+#fig_len = fig.get_figlength()
+fig.text(x_line+0.028,0.5+0.01, r'$U = \infty$',rotation=90,ha='center',va='bottom',fontsize=18)
+fig.text(x_line-0.013,ax[0][-1].get_position().y1+0.065 , '_', ha='center', va='center', fontsize=20)
+fig.text(x_line-0.0118,ax[1][-1].get_position().y0-0.018 , '_', ha='center', va='center', fontsize=20)
+fig.lines.append(plt.Line2D([x_line, x_line], [ax[0][-1].get_position().y1+0.04, ax[1][-1].get_position().y0-0.04],transform=fig.transFigure, color='black'))
+'''
 #==========================================================================
 #ax[13].set_ylabel('Spin structure factor',fontsize=24)
-ax[12].text(-0.073,0,'$S(\\vec{q})$',fontsize=24,rotation=90)
+#ax[12].text(-0.073,0,'$S(\\vec{q})$',fontsize=24,rotation=90)
 #'Spin structure factor',fontsize=24,rotation=90)
-plt.text(0.55,y_line+0,'$n_{h}$',fontsize = 24)
+#plt.text(0.55,y_line+0,'$n_{h}$',fontsize = 24)
 
-plt.text(0.085,0.8,'(a)',fontsize=22)
-plt.text(0.518,0.8,'(d)',fontsize=22)
-plt.text(0.085,0.56,'(b)',fontsize=22)
-plt.text(0.085,0.325,'(c)',fontsize=22)
+plt.text(0.075,0.8,'(a)',fontsize=18)#,style='italic')
+#plt.text(0.518,0.8,'(d)',fontsize=22,style='italic')
+plt.text(0.075,0.58,'(b)',fontsize=18)#,style='italic')
+plt.text(0.075,0.35,'(c)',fontsize=18)#,style='italic')
 #---------------------------------------------------------
-ms=9
-for i in range(2):
-    ax[i+12].plot(nh2[i],sq_max[i],label = 'Max $S$($\\vec{q}$)',markersize=ms,marker='o',linestyle='--',markerfacecolor='none')
-    ax[i+12].plot(nh2[i],sK[i],label = '$S(\mathbf{K})$',markersize=ms,marker='o',linestyle='--',markerfacecolor='none')
-    ax[i+12].plot(nh2[i],sM[i],label = '$S$($\mathbf{M_{1}}$)',markersize=ms,marker='o',linestyle='--',markerfacecolor='none')
-    ax[i+12].plot(nh2[i],sM2[i],label = '$S$($\mathbf{M_{2}}$)',markersize=ms,marker='o',linestyle='--',markerfacecolor='none')
-    ax[i+12].xaxis.tick_top()
-    ax[i+12].set_xticks([0.1, 0.2, 0.3, 0.4,0.5,0.6,0.7])
-    #ax[i].yaxis.tick_right()
-    ax[i+12].tick_params(axis='both', which='major', labelsize=18)
-    ax[12].legend(ncol=2,fontsize=13.5)
-    ax[i+12].grid(alpha=0.3)
-    if i == 0:
-        ax[i+12].tick_params(labeltop=True)
-    if i != 0:
-        ax[i+12].tick_params(labeltop=False)
+ax[3].text(0.2,0.6,'$S(\\vec{q})$',c='y',fontsize=16)
+ax[7].text(0.2,0.6,'$n_{\\sigma}(\\vec{q})$',c='y',fontsize=16)
+ax[11].text(0.2,0.6,'$n_{\\sigma}(\\vec{q})$',c='y',fontsize=16)
 
-ax[12].axvspan(0.22, 0.3, color='grey', alpha=0.3)
-ax[13].axvspan(0.22, 0.3, color='grey', alpha=0.3, label='highlighted segment')
-ax[12].axvspan(0.46, 0.51, color='grey', alpha=0.3)
-ax[13].axvspan(0.46, 0.51, color='grey', alpha=0.3, label='highlighted segment')
+'''
+plt.rcParams.update({
+    "font.family": "serif",
+    "font.serif": ["Times New Roman"],
+    "font.size": 24,
+    #'axes.titlesize': 16,     # title size
+    'axes.labelsize': 14,     # x/y label size
+    'xtick.labelsize': 12,    # x tick size
+    'ytick.labelsize': 12,    # y tick size
+    'legend.fontsize': 20,    # legend font
+    })
+'''
 
-ax[13].text(0.085,1.0,'HS\n')
-ax[13].text(0.065,0.999,'phase')
-ax[13].text(0.28,1.0,'Intermediate \n')
-ax[13].text(0.34,0.999,'phase')
-ax[13].text(0.54,1.0,'Paramagnetic \n')
-ax[13].text(0.6,0.999,'phase')
 
-ax[3].text(0.2,0.6, r'$S(\vec{q})$',c='w',fontsize=16,fontweight='bold')
-ax[7].text(0.2,0.6,'$n_{\\sigma}(\\vec{q})$',c='w',fontsize=16)
-ax[11].text(0.2,0.6,'$n_{\\sigma}(\\vec{q})$',c='w',fontsize=16)
-
-ax[12].text(0.71,0.6,f"${Nx[0]} \\times {Ny[0]}$", fontsize=20, fontweight='bold', color='black')
-ax[13].text(0.705,0.6,f"${Nx[2]} \\times {Ny[2]}$", fontsize=20, fontweight='bold', color='black')
-pos = ax[12].get_position()
-xx= 0.1
-ax[12].set_position([pos.x0, pos.y0+0.18 , pos.width, pos.height-0.22])
-pos = ax[13].get_position()
-ax[13].set_position([pos.x0, pos.y0+0.07 , pos.width, pos.height+0.02])
+#ax[12].set_ylim([0.21,1.99])
+#ax[13].set_ylim([0.21,1.99])
 
 #---------------------------------------------------------
-plt.savefig("fig2.pdf",dpi=600,bbox_inches='tight',pad_inches=0.0)
+plt.savefig("figs6x6.pdf",dpi=300,bbox_inches='tight',pad_inches=0.0)
+
 #plt.show()
